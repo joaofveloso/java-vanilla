@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class YamlParser {
@@ -98,6 +99,7 @@ public class YamlParser {
 
 
     private Object parseValue(String valueString) {
+        valueString = valueString.split("#")[0];
         if (valueString.equalsIgnoreCase("null")) {
             return null;
         }
@@ -120,7 +122,18 @@ public class YamlParser {
         if (valueString.startsWith("{") && valueString.endsWith("}")) {
             return parseMap(valueString);
         }
+        if (valueString.startsWith("[") & valueString.endsWith("]")) {
+            return parseList(valueString);
+        }
         return valueString.trim();
+    }
+
+    private List<Object> parseList(String valueString) {
+        if (valueString.startsWith("[") && valueString.endsWith("]")) {
+            return parseList(valueString.substring(1, valueString.length() - 1));
+        }
+        return Stream.of(valueString.split(",")).map(String::trim).map(this::parseValue).collect(
+                Collectors.toList());
     }
 
     public Map<String, Object> parseMap(String input) {

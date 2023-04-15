@@ -1,6 +1,8 @@
 import com.vanilla.YamlParser;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class YamlParserTest {
@@ -133,18 +135,38 @@ public class YamlParserTest {
         System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testComments() {
         String value = """
                 # This is a comment in a YAML file
                 key1: value1  # This is a comment at the end of a line
                 # This is a comment after the line
+                key2: value2
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert "value1".equals(map.get("key1")) : "Expected 'value1', but got " + map.get("key1");
+        assert "value2".equals(map.get("key2")) : "Expected 'value2', but got " + map.get("key2");
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testInlineList() {
         String value = """
-                key1: value1  # This is a comment at the end of a line
+                key1: [item1, item2, item3, item4]
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+        Object list = map.get("key1");
+
+        assert ArrayList.class.equals(list.getClass()) : "Expected 'ArrayList.class', but got " + map.get("key1").getClass().getSimpleName() ;
+        assert Integer.valueOf(4).equals(((List) list).size()) : "Expected '4', but got " + ((List) list).size();
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
     void testMultiLineString() {
@@ -218,7 +240,7 @@ public class YamlParserTest {
 
     void testFetchDataFromVmParams() {
         String value = """
-                string: "This value '$(core.hide.value)' comes from VM"
+                string: "This value '${core.hide.value:Not Found}' comes from VM"
                 """;
     }
 
