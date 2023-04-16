@@ -169,23 +169,45 @@ public class YamlParserTest {
         System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testMultiLineString() {
         String value = """
                 description: |
                   This is a multi-line string.
                   It can contain multiple lines of text.
                 """;
+
+        String result = """
+                This is a multi-line string.
+                It can contain multiple lines of text.""";
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert result.equals(map.get("description")): "Expected '" + result + "', but got '" + map.get("description") + "'";
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testFoldedStrings() {
         String value = """
-                # Folded strings
                 description: >
                   This is a folded string.
                   It can contain multiple lines of text,
                   but they are folded into a single line
                   when parsed by a YAML parser.
                 """;
+
+        String result = """
+              This is a folded string. It can contain multiple lines of text, but they are folded into a single line when parsed by a YAML parser.""";
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert result.equals(map.get("description")): "Expected '" + result + "', but got '" + map.get("description") + "'";
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
     void testExplicityTyping() {

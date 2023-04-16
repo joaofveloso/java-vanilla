@@ -46,9 +46,21 @@ public class YamlParser {
                 } while (k >= 0);
 
                 String key = ("".equals(completeKey) ? "" : completeKey + ".") + lineWithIdentations.get(i).key;
+                String linha = "";
+                String groupedValue = "";
                 Object value = parseValue(lineWithIdentations.get(i).value.trim());
-
-                if ("<<".equals(lineWithIdentations.get(i).key)) {
+                if (List.of("|", ">").contains(lineWithIdentations.get(i).value)) {
+                    if ("|".equals(lineWithIdentations.get(i).value)) {
+                        linha = "\n";
+                    } else {
+                        linha = " ";
+                    }
+                    do {
+                        ++i;
+                        groupedValue += (groupedValue.isBlank() ? "" : linha) + lineWithIdentations.get(i).key;
+                    } while( lineWithIdentations.size()-1 > i && lineWithIdentations.get(i).isText);
+                    map.put(key, groupedValue);
+                } else if ("<<".equals(lineWithIdentations.get(i).key)) {
                     Map<String, Object> stringObjectMap = aliasKeysReference.get(
                             lineWithIdentations.get(i).value.trim().replace("*", ""));
                     String finalCompleteKey = completeKey;
@@ -79,6 +91,7 @@ public class YamlParser {
         String key;
         String value;
         Boolean isAlias = false;
+        Boolean isText = false;
 
         public LineWithIdentation(String value) {
             this.ident = (int) (value.chars().takeWhile(p -> p == ' ').count() / 2);
@@ -89,6 +102,7 @@ public class YamlParser {
                 this.isAlias = trimmedValue.startsWith("&");
                 this.value = trimmedValue.substring(isAlias ? 1 : 0);
             }
+            this.isText = !value.contains(":");
         }
 
         public boolean hasValue() {
