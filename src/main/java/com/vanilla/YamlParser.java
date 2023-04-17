@@ -1,6 +1,7 @@
 package com.vanilla;
 
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +50,9 @@ public class YamlParser {
                 String linha = "";
                 String groupedValue = "";
                 Object value = parseValue(lineWithIdentations.get(i).value.trim());
+                if ("".equals(value) && lineWithIdentations.get(i + 1).ident > lineWithIdentations.get(i).ident) {
+                    continue;
+                }
                 if (List.of("|", ">").contains(lineWithIdentations.get(i).value)) {
                     if ("|".equals(lineWithIdentations.get(i).value)) {
                         linha = "\n";
@@ -139,7 +143,25 @@ public class YamlParser {
         if (valueString.startsWith("[") & valueString.endsWith("]")) {
             return parseList(valueString);
         }
+        if (valueString.startsWith("!!")) {
+
+            return parceSplitTyping(valueString);
+        }
         return valueString.trim();
+    }
+
+    private Object parceSplitTyping(String valueString) {
+        if (valueString.startsWith("!!")) {
+            return parceSplitTyping(valueString.substring(2, valueString.length()));
+        }
+        String[] s = valueString.split(" ");
+        if ("float".equals(s[0])) {
+            return Float.parseFloat(s[1]);
+        }
+        if ("timestamp".equals(s[0])) {
+            return LocalDateTime.parse(s[1]);
+        }
+        return valueString;
     }
 
     private List<Object> parseList(String valueString) {

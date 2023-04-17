@@ -1,6 +1,7 @@
 import com.vanilla.YamlParser;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -210,13 +211,23 @@ public class YamlParserTest {
         System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testExplicityTyping() {
         String value = """
                 number: !!float 3.14159
-                date: !!timestamp '2023-04-14 12:00:00'
+                date: !!timestamp 2023-04-14T12:00:00
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert Float.class.equals(map.get("number").getClass()) : "Expected '" + Float.class.getSimpleName() + "', but got '" + map.get("number").getClass() + "'";
+        assert LocalDateTime.class.equals(map.get("date").getClass()) : "Expected '" + LocalDateTime.class.getSimpleName() + "', but got '" + map.get("date").getClass() + "'";
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testNestedItems() {
         String value = """
                 person:
@@ -227,6 +238,17 @@ public class YamlParserTest {
                     city: Anytown
                     state: CA
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert "John Doe".equals(map.get("person.name")): "Expected 'John Does', but got '" + map.get("person.name")+ "'";
+        assert Integer.valueOf(30).equals(map.get("person.age")): "Expected '30', but got '" + map.get("person.age")+ "'";
+        assert "123 Main St".equals(map.get("person.address.street")): "Expected '123 Main St', but got '" + map.get("person.address.street")+ "'";
+        assert "Anytown".equals(map.get("person.address.city")): "Expected 'Anytown', but got '" + map.get("person.address.city")+ "'";
+        assert "CA".equals(map.get("person.address.state")): "Expected 'CA', but got '" + map.get("person.address.state")+ "'";
+
+        String methodName = new Exception().getStackTrace()[0].getMethodName();
+        System.out.println(methodName + ": SUCCESS");
     }
 
     void testAlisesAndAchorsForNestedRawValues() {
