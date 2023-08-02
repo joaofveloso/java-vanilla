@@ -1,16 +1,48 @@
-package com.vanilla;
+package com.vanilla.yamlParser;
 
-
+import com.vanilla.yamlParser.factory.Tuple;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class YamlParser {
+
+    private final Pattern keyValuePattern = Pattern.compile("(.*):\\s*(.*)");
+
+    public Map<String, Object> parseYaml_(String yamlString) {
+
+        Iterator<String> iterator = Stream.of(yamlString.split("\n")).iterator();
+        return this.parseYaml_(iterator,new HashMap<>(), null);
+    }
+
+    public Map<String, Object> parseYaml_(Iterator<String> iterator, Map<String, Object> map, String key) {
+
+        String value = iterator.next();
+        Tuple<String, Object> t = null;
+        if ((t = parseKeyValuePattern(value)) != null) {
+            map.put(t.first(), t.second());
+        }
+        if (iterator.hasNext()) {
+            return this.parseYaml_(iterator, map, key);
+        }
+        return map;
+    }
+
+    private Tuple<String, Object> parseKeyValuePattern(String value) {
+        Matcher matcher = keyValuePattern.matcher(value);
+        if (matcher.find()) {
+            return new Tuple<>(matcher.group(1), matcher.group(2));
+        }
+        return null;
+    }
 
     public Map<String, Object> parseYaml(String yamlString) {
 
@@ -35,12 +67,14 @@ public class YamlParser {
                     if (ident < currentIdent) {
                         if (line.isAlias) {
                             List<String> orDefault = aliasKeys.computeIfAbsent(
-                                    line.value, k1 -> new ArrayList<>());
+                                    line.aliasKey, k1 -> new ArrayList<>());
                             orDefault.add(completeKey + "$");
                         }
-
                         currentIdent = ident;
                         completeKey = line.key + (completeKey.isBlank() ? "" : "." + completeKey);
+                    }
+                    if (line.rowAlias) {
+                        aliasKeysReference.put(line.aliasKey, Map.of(line.aliasKey, line.value));
                     }
 
                     k--;
@@ -69,6 +103,9 @@ public class YamlParser {
                             lineWithIdentations.get(i).value.trim().replace("*", ""));
                     String finalCompleteKey = completeKey;
                     stringObjectMap.forEach((a, b) -> map.put(finalCompleteKey + "." + a, b));
+                } else if (String.valueOf(value).startsWith("*")) {
+                    String aliasKey = String.valueOf(value).replace("*", "");
+                    map.put(key, aliasKeysReference.get(aliasKey).get(aliasKey));
                 } else {
                     map.put(key, value);
                 }
@@ -93,8 +130,10 @@ public class YamlParser {
     private static class LineWithIdentation {
         int ident;
         String key;
+        String aliasKey;
         String value;
         Boolean isAlias = false;
+        Boolean rowAlias = false;
         Boolean isText = false;
 
         public LineWithIdentation(String value) {
@@ -103,8 +142,13 @@ public class YamlParser {
             this.key = split[0];
             if (split.length > 1) {
                 String trimmedValue = split[1].trim();
-                this.isAlias = trimmedValue.startsWith("&");
-                this.value = trimmedValue.substring(isAlias ? 1 : 0);
+                Boolean startWithAlias = trimmedValue.startsWith("&");
+                if (startWithAlias) {
+                    this.rowAlias = trimmedValue.split(" ").length > 1;
+                    this.isAlias = !this.rowAlias;
+                    this.aliasKey = trimmedValue.substring(1, trimmedValue.split(" ")[0].length());
+                }
+                this.value = trimmedValue.substring(isAlias || rowAlias ? trimmedValue.split(" ")[0].length() : 0).trim();
             }
             this.isText = !value.contains(":");
         }

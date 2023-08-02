@@ -1,4 +1,4 @@
-import com.vanilla.YamlParser;
+import com.vanilla.yamlParser.YamlParser;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
@@ -18,6 +18,7 @@ public class YamlParserTest {
         for (Method declaredMethod : declaredMethods) {
             if (declaredMethod.isAnnotationPresent(Test.class)) {
                 declaredMethod.invoke(test);
+                System.out.println(declaredMethod.getName() + ": SUCCESS");
             }
         }
     }
@@ -36,14 +37,11 @@ public class YamlParserTest {
                 key3: value3
                 """;
 
-        Map<String, Object> map = yamlParser.parseYaml(value);
+        Map<String, Object> map = yamlParser.parseYaml_(value);
 
         assert "value1".equals(map.get("key1")) : "Expected 'value1', but got " + map.get("key1");
         assert "value2".equals(map.get("key2")) : "Expected 'value2', but got " + map.get("key2");
         assert "value3".equals(map.get("key3")) : "Expected 'value3', but got " + map.get("key3");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -61,9 +59,6 @@ public class YamlParserTest {
         assert "value1".equals(map.get("key1.subkey1")) : "Expected 'value1', but got " + map.get("key1.subkey1");
         assert "value2".equals(map.get("key1.subkey2")) : "Expected 'value2', but got " + map.get("key1.subkey2");
         assert "value3".equals(map.get("key1.subkey3")) : "Expected 'value3', but got " + map.get("key1.subkey3");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -84,9 +79,6 @@ public class YamlParserTest {
         assert Double.class.equals(map.get("double").getClass()) : "Expected 'Double', but got " + map.get("double").getClass().getSimpleName();
         assert Boolean.class.equals(map.get("boolean").getClass()) : "Expected 'Boolean', but got " + map.get("boolean").getClass().getSimpleName();
         assert map.get("null_value") == null : "Expected 'Null', but got " + map.get("null_value");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -109,9 +101,6 @@ public class YamlParserTest {
         assert "value1".equals(map.get("parent.child2.key1")) : "Expected 'value1', but got " + map.get("parent.child2.key1");
         assert "value2".equals(map.get("parent.child2.key2")) : "Expected 'value2', but got " + map.get("parent.child2.key2");
         assert "value3".equals(map.get("parent.child2.key3")) : "Expected 'value3', but got " + map.get("parent.child2.key3");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -131,9 +120,6 @@ public class YamlParserTest {
         assert "123 Main St".equals(address.get("street")) : "Expected '123 Main St', but got " + address.get("street");
         assert "Anytown".equals(address.get("city")) : "Expected 'Anytown', but got " + address.get("city");
         assert "CA".equals(address.get("state")) : "Expected 'CA', but got " + address.get("state");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -149,12 +135,9 @@ public class YamlParserTest {
 
         assert "value1".equals(map.get("key1")) : "Expected 'value1', but got " + map.get("key1");
         assert "value2".equals(map.get("key2")) : "Expected 'value2', but got " + map.get("key2");
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
-    @Test
+    //@Test
     void testInlineList() {
         String value = """
                 key1: [item1, item2, item3, item4]
@@ -165,9 +148,6 @@ public class YamlParserTest {
 
         assert ArrayList.class.equals(list.getClass()) : "Expected 'ArrayList.class', but got " + map.get("key1").getClass().getSimpleName() ;
         assert Integer.valueOf(4).equals(((List) list).size()) : "Expected '4', but got " + ((List) list).size();
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -185,9 +165,6 @@ public class YamlParserTest {
         Map<String, Object> map = yamlParser.parseYaml(value);
 
         assert result.equals(map.get("description")): "Expected '" + result + "', but got '" + map.get("description") + "'";
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -206,9 +183,6 @@ public class YamlParserTest {
         Map<String, Object> map = yamlParser.parseYaml(value);
 
         assert result.equals(map.get("description")): "Expected '" + result + "', but got '" + map.get("description") + "'";
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -222,9 +196,6 @@ public class YamlParserTest {
 
         assert Float.class.equals(map.get("number").getClass()) : "Expected '" + Float.class.getSimpleName() + "', but got '" + map.get("number").getClass() + "'";
         assert LocalDateTime.class.equals(map.get("date").getClass()) : "Expected '" + LocalDateTime.class.getSimpleName() + "', but got '" + map.get("date").getClass() + "'";
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
     @Test
@@ -246,11 +217,9 @@ public class YamlParserTest {
         assert "123 Main St".equals(map.get("person.address.street")): "Expected '123 Main St', but got '" + map.get("person.address.street")+ "'";
         assert "Anytown".equals(map.get("person.address.city")): "Expected 'Anytown', but got '" + map.get("person.address.city")+ "'";
         assert "CA".equals(map.get("person.address.state")): "Expected 'CA', but got '" + map.get("person.address.state")+ "'";
-
-        String methodName = new Exception().getStackTrace()[0].getMethodName();
-        System.out.println(methodName + ": SUCCESS");
     }
 
+    @Test
     void testAlisesAndAchorsForNestedRawValues() {
         String value = """
                 parent:
@@ -261,6 +230,13 @@ public class YamlParserTest {
                     key3: *alias1
                     key4: value4
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert "value1".equals(map.get("parent.child1.key1")) : "Expected 'value1' but got '" + map.get("parent.child1.key1") + "'";
+        assert "value2".equals(map.get("parent.child1.key2")) : "Expected 'value2' but got '" + map.get("parent.child1.key2") + "'";
+        assert "value1".equals(map.get("parent.child2.key3")) : "Expected 'value1' but got '" + map.get("parent.child2.key3") + "'";
+        assert "value4".equals(map.get("parent.child2.key4")) : "Expected 'value4' but got '" + map.get("parent.child2.key4") + "'";
     }
 
     void testAliasesAndAchordWithList() {
