@@ -55,36 +55,17 @@ public class YamlParser {
 
         for (int i = 0; i < lineWithIdentations.size(); i++) {
             if (lineWithIdentations.get(i).hasValue() && !lineWithIdentations.get(i).isAlias) {
-                int currentIdent = lineWithIdentations.get(i).ident;
-                String completeKey = "";
+                int currentIdent = lineWithIdentations.get(i).indent;
                 int k = i;
                 Map<String, List<String>> aliasKeys = new HashMap<>();
 
-                do {
-                    LineWithIdentation line = lineWithIdentations.get(k);
-                    int ident = line.ident;
-
-                    if (ident < currentIdent) {
-                        if (line.isAlias) {
-                            List<String> orDefault = aliasKeys.computeIfAbsent(
-                                    line.aliasKey, k1 -> new ArrayList<>());
-                            orDefault.add(completeKey + "$");
-                        }
-                        currentIdent = ident;
-                        completeKey = line.key + (completeKey.isBlank() ? "" : "." + completeKey);
-                    }
-                    if (line.rowAlias) {
-                        aliasKeysReference.put(line.aliasKey, Map.of(line.aliasKey, line.value));
-                    }
-
-                    k--;
-                } while (k >= 0);
+                String completeKey = extractCompleteKey(aliasKeysReference, lineWithIdentations, currentIdent, k, aliasKeys);
 
                 String key = ("".equals(completeKey) ? "" : completeKey + ".") + lineWithIdentations.get(i).key;
                 String linha = "";
                 String groupedValue = "";
                 Object value = parseValue(lineWithIdentations.get(i).value.trim());
-                if ("".equals(value) && lineWithIdentations.get(i + 1).ident > lineWithIdentations.get(i).ident) {
+                if ("".equals(value) && lineWithIdentations.get(i + 1).indent > lineWithIdentations.get(i).indent) {
                     continue;
                 }
                 if (List.of("|", ">").contains(lineWithIdentations.get(i).value)) {
@@ -105,7 +86,7 @@ public class YamlParser {
                     stringObjectMap.forEach((a, b) -> map.put(finalCompleteKey + "." + a, b));
                 } else if (String.valueOf(value).startsWith("*")) {
                     String aliasKey = String.valueOf(value).replace("*", "");
-                    map.put(key, aliasKeysReference.get(aliasKey).get(aliasKey));
+                    map.put(key, parseValue(aliasKeysReference.get(aliasKey).get(aliasKey).toString()));
                 } else {
                     map.put(key, value);
                 }
@@ -127,8 +108,33 @@ public class YamlParser {
         return map;
     }
 
+    private static String extractCompleteKey(Map<String, Map<String, Object>> aliasKeysReference, List<LineWithIdentation> lineWithIdentations, int currentIdent, int k, Map<String, List<String>> aliasKeys) {
+        String completeKey = "";
+        do {
+            LineWithIdentation line = lineWithIdentations.get(k);
+            int ident = line.indent;
+
+            if (ident < currentIdent) {
+                if (line.isAlias) {
+                    List<String> orDefault = aliasKeys.computeIfAbsent(
+                            line.aliasKey, k1 -> new ArrayList<>());
+                    orDefault.add(completeKey + "$");
+                }
+                currentIdent = ident;
+                completeKey = line.key + (completeKey.isBlank() ? "" : "." + completeKey);
+            }
+            //TODO extrair
+            if (line.rowAlias) {
+                aliasKeysReference.put(line.aliasKey, Map.of(line.aliasKey, line.value));
+            }
+
+            k--;
+        } while (k >= 0);
+        return completeKey;
+    }
+
     private static class LineWithIdentation {
-        int ident;
+        int indent;
         String key;
         String aliasKey;
         String value;
@@ -137,7 +143,7 @@ public class YamlParser {
         Boolean isText = false;
 
         public LineWithIdentation(String value) {
-            this.ident = (int) (value.chars().takeWhile(p -> p == ' ').count() / 2);
+            this.indent = (int) (value.chars().takeWhile(p -> p == ' ').count() / 2);
             String[] split = value.trim().split(":", 2);
             this.key = split[0];
             if (split.length > 1) {
@@ -157,8 +163,6 @@ public class YamlParser {
             return Objects.nonNull(value);
         }
     }
-
-
 
     private Object parseValue(String valueString) {
         valueString = valueString.split("#")[0];

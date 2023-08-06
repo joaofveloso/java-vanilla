@@ -137,7 +137,7 @@ public class YamlParserTest {
         assert "value2".equals(map.get("key2")) : "Expected 'value2', but got " + map.get("key2");
     }
 
-    //@Test
+    @Test
     void testInlineList() {
         String value = """
                 key1: [item1, item2, item3, item4]
@@ -239,11 +239,21 @@ public class YamlParserTest {
         assert "value4".equals(map.get("parent.child2.key4")) : "Expected 'value4' but got '" + map.get("parent.child2.key4") + "'";
     }
 
+    @Test
     void testAliasesAndAchordWithList() {
         String value = """
                 list1: &mylist [1, 2, 3]
                 list2: *mylist
                 """;
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+        Object list1 = map.get("list1");
+        Object list2 = map.get("list2");
+
+        assert ArrayList.class.equals(list1.getClass()) : "Expected 'ArrayList.class', but got " + map.get("list1").getClass().getSimpleName() ;
+        assert Integer.valueOf(3).equals(((List) list1).size()) : "Expected '4', but got " + ((List) list1).size();
+        assert ArrayList.class.equals(list1.getClass()) : "Expected 'ArrayList.class', but got " + map.get("list2").getClass().getSimpleName() ;
+        assert Integer.valueOf(3).equals(((List) list2).size()) : "Expected '4', but got " + ((List) list2).size();
     }
 
     void testEscapedChars() {
