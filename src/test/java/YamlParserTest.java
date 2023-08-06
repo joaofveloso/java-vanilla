@@ -256,47 +256,9 @@ public class YamlParserTest {
         assert Integer.valueOf(3).equals(((List) list2).size()) : "Expected '4', but got " + ((List) list2).size();
     }
 
-    void testEscapedChars() {
-        String value = """
-                string: "This is a string with \\"escaped\\" characters"
-                """;
-    }
-
-    void testNullValues() {
-        String value = """
-                string: "This is a string with \\"escaped\\" characters"
-                """;
-    }
-
     void testFetchDataFromVmParams() {
         String value = """
                 string: "This value '${core.hide.value:Not Found}' comes from VM"
-                """;
+           adding     """;
     }
-
-    void testBinaryData() {
-        String value = """
-                image: !!binary |
-                  R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=
-                """;
-    }
-
-    void testUnorderedSet() {
-        String value = """
-                fruits: !!set
-                  ? apple
-                  ? banana
-                  ? cherry
-                """;
-    }
-
-    void testTaggedValues() {
-        String value = """
-                !myapp/CustomType
-                  field1: value1
-                  field2: value2           
-                """;
-    }
-
-
 }
