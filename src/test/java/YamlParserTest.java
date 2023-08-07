@@ -37,7 +37,7 @@ public class YamlParserTest {
                 key3: value3
                 """;
 
-        Map<String, Object> map = yamlParser.parseYaml_(value);
+        Map<String, Object> map = yamlParser.parseYaml(value);
 
         assert "value1".equals(map.get("key1")) : "Expected 'value1', but got " + map.get("key1");
         assert "value2".equals(map.get("key2")) : "Expected 'value2', but got " + map.get("key2");

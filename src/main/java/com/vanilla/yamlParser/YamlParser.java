@@ -1,48 +1,11 @@
 package com.vanilla.yamlParser;
 
-import com.vanilla.yamlParser.factory.Tuple;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class YamlParser {
-
-    private final Pattern keyValuePattern = Pattern.compile("(.*):\\s*(.*)");
-
-    public Map<String, Object> parseYaml_(String yamlString) {
-
-        Iterator<String> iterator = Stream.of(yamlString.split("\n")).iterator();
-        return this.parseYaml_(iterator,new HashMap<>(), null);
-    }
-
-    public Map<String, Object> parseYaml_(Iterator<String> iterator, Map<String, Object> map, String key) {
-
-        String value = iterator.next();
-        Tuple<String, Object> t = null;
-        if ((t = parseKeyValuePattern(value)) != null) {
-            map.put(t.first(), t.second());
-        }
-        if (iterator.hasNext()) {
-            return this.parseYaml_(iterator, map, key);
-        }
-        return map;
-    }
-
-    private Tuple<String, Object> parseKeyValuePattern(String value) {
-        Matcher matcher = keyValuePattern.matcher(value);
-        if (matcher.find()) {
-            return new Tuple<>(matcher.group(1), matcher.group(2));
-        }
-        return null;
-    }
 
     public Map<String, Object> parseYaml(String yamlString) {
 
@@ -54,61 +17,68 @@ public class YamlParser {
                 .toList();
 
         for (int i = 0; i < lineWithIdentations.size(); i++) {
-            if (lineWithIdentations.get(i).hasValue() && !lineWithIdentations.get(i).isAlias) {
-                int currentIdent = lineWithIdentations.get(i).indent;
-                int k = i;
+            LineWithIdentation currentLine = lineWithIdentations.get(i);
+            if (currentLine.hasValue() && !currentLine.isAlias) {
+
                 Map<String, List<String>> aliasKeys = new HashMap<>();
+                String completeKey = extractCompleteKey(
+                        aliasKeysReference, lineWithIdentations, currentLine.indent, i, aliasKeys);
 
-                String completeKey = extractCompleteKey(aliasKeysReference, lineWithIdentations, currentIdent, k, aliasKeys);
+                String key = ("".equals(completeKey) ? "" : completeKey + ".") + currentLine.key;
 
-                String key = ("".equals(completeKey) ? "" : completeKey + ".") + lineWithIdentations.get(i).key;
-                String linha = "";
-                String groupedValue = "";
-                Object value = parseValue(lineWithIdentations.get(i).value.trim());
-                if ("".equals(value) && lineWithIdentations.get(i + 1).indent > lineWithIdentations.get(i).indent) {
+                Object value = parseValue(currentLine.value.trim());
+                if ("".equals(value) && lineWithIdentations.get(i + 1).indent > currentLine.indent) {
                     continue;
                 }
                 if (List.of("|", ">").contains(lineWithIdentations.get(i).value)) {
-                    if ("|".equals(lineWithIdentations.get(i).value)) {
-                        linha = "\n";
-                    } else {
-                        linha = " ";
-                    }
-                    do {
-                        ++i;
-                        groupedValue += (groupedValue.isBlank() ? "" : linha) + lineWithIdentations.get(i).key;
-                    } while( lineWithIdentations.size()-1 > i && lineWithIdentations.get(i).isText);
+                    String groupedValue = handleMultilineString(i, lineWithIdentations,currentLine.value);
                     map.put(key, groupedValue);
                 } else if ("<<".equals(lineWithIdentations.get(i).key)) {
-                    Map<String, Object> stringObjectMap = aliasKeysReference.get(
-                            lineWithIdentations.get(i).value.trim().replace("*", ""));
-                    String finalCompleteKey = completeKey;
-                    stringObjectMap.forEach((a, b) -> map.put(finalCompleteKey + "." + a, b));
+                    handleAliasedMerge(map, aliasKeysReference, lineWithIdentations, i, completeKey);
                 } else if (String.valueOf(value).startsWith("*")) {
                     String aliasKey = String.valueOf(value).replace("*", "");
                     map.put(key, parseValue(aliasKeysReference.get(aliasKey).get(aliasKey).toString()));
                 } else {
                     map.put(key, value);
                 }
-
-                int finalI = i;
-                aliasKeys.forEach((a, b) -> {
-                    b.stream().filter(p -> p.endsWith("$")).forEach(c -> {
-                        String newKey = c.replace("$", "");
-                        newKey = ("".equals(newKey) ? "" : newKey + ".") + lineWithIdentations.get(
-                                finalI).key;
-                        Map<String, Object> orDefault = aliasKeysReference.computeIfAbsent(a,
-                                k1 -> new HashMap<>());
-                        orDefault.put(newKey, value);
-                    });
-                });
+                HandleAliasValueAssignment(aliasKeysReference, lineWithIdentations, aliasKeys, value, i);
             }
         }
-
         return map;
     }
 
-    private static String extractCompleteKey(Map<String, Map<String, Object>> aliasKeysReference, List<LineWithIdentation> lineWithIdentations, int currentIdent, int k, Map<String, List<String>> aliasKeys) {
+    private static void HandleAliasValueAssignment(Map<String, Map<String, Object>> aliasKeysReference, List<LineWithIdentation> lineWithIdentations, Map<String, List<String>> aliasKeys, Object value, int finalI) {
+        aliasKeys.forEach((a, b) -> b.stream().filter(p -> p.endsWith("$")).forEach(c -> {
+            String newKey = c.replace("$", "");
+            newKey = ("".equals(newKey) ? "" : newKey + ".") + lineWithIdentations.get(
+                    finalI).key;
+            Map<String, Object> orDefault = aliasKeysReference.computeIfAbsent(a,
+                    k1 -> new HashMap<>());
+            orDefault.put(newKey, value);
+        }));
+    }
+
+    private static void handleAliasedMerge(Map<String, Object> map, Map<String, Map<String, Object>> aliasKeysReference, List<LineWithIdentation> lineWithIdentations, int i, String completeKey) {
+        Map<String, Object> stringObjectMap = aliasKeysReference.get(
+                lineWithIdentations.get(i).value.trim().replace("*", ""));
+        stringObjectMap.forEach((a, b) -> map.put(completeKey + "." + a, b));
+    }
+
+    private String handleMultilineString(
+            int currentIndex, List<LineWithIdentation> linesWithIndentation, String currentValue) {
+        StringBuilder groupedValue = new StringBuilder();
+        String lineSeparator = "|".equals(currentValue) ? "\n" : " ";
+        do {
+            ++currentIndex;
+            groupedValue.append(groupedValue.toString().isBlank() ? "" :
+                    lineSeparator).append(linesWithIndentation.get(currentIndex).key);
+        } while( linesWithIndentation.size()-1 > currentIndex && linesWithIndentation.get(currentIndex).isText);
+        return groupedValue.toString();
+    }
+
+    private static String extractCompleteKey(
+            Map<String, Map<String, Object>> aliasKeysReference, List<LineWithIdentation> lineWithIdentations,
+            Integer currentIdent, Integer k, Map<String, List<String>> aliasKeys) {
         String completeKey = "";
         do {
             LineWithIdentation line = lineWithIdentations.get(k);
@@ -140,7 +110,7 @@ public class YamlParser {
         String value;
         Boolean isAlias = false;
         Boolean rowAlias = false;
-        Boolean isText = false;
+        Boolean isText;
 
         public LineWithIdentation(String value) {
             this.indent = (int) (value.chars().takeWhile(p -> p == ' ').count() / 2);
@@ -148,7 +118,7 @@ public class YamlParser {
             this.key = split[0];
             if (split.length > 1) {
                 String trimmedValue = split[1].trim();
-                Boolean startWithAlias = trimmedValue.startsWith("&");
+                boolean startWithAlias = trimmedValue.startsWith("&");
                 if (startWithAlias) {
                     this.rowAlias = trimmedValue.split(" ").length > 1;
                     this.isAlias = !this.rowAlias;
@@ -200,7 +170,7 @@ public class YamlParser {
 
     private Object parceSplitTyping(String valueString) {
         if (valueString.startsWith("!!")) {
-            return parceSplitTyping(valueString.substring(2, valueString.length()));
+            return parceSplitTyping(valueString.substring(2));
         }
         String[] s = valueString.split(" ");
         if ("float".equals(s[0])) {

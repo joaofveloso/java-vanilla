@@ -1,4 +1,4 @@
-package com.vanilla;
+package com.vanilla.httpServer;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
