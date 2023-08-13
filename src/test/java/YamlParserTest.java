@@ -1,10 +1,12 @@
-import com.vanilla.yamlParser.YamlParser;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import com.vanilla.yamlParser.YamlParser;
+import org.testng.annotations.Test;
 
 public class YamlParserTest {
 
@@ -17,8 +19,9 @@ public class YamlParserTest {
         YamlParserTest test = new YamlParserTest(new YamlParser());
         for (Method declaredMethod : declaredMethods) {
             if (declaredMethod.isAnnotationPresent(Test.class)) {
+                System.out.print(declaredMethod.getName());
                 declaredMethod.invoke(test);
-                System.out.println(declaredMethod.getName() + ": SUCCESS");
+                System.out.println(": SUCCESS");
             }
         }
     }
@@ -256,9 +259,20 @@ public class YamlParserTest {
         assert Integer.valueOf(3).equals(((List) list2).size()) : "Expected '4', but got " + ((List) list2).size();
     }
 
+    @Test
     void testFetchDataFromVmParams() {
         String value = """
-                string: "This value '${core.hide.value:Not Found}' comes from VM"
-           adding     """;
+                string: This value '${X-PROPERTY:Not Found}' comes from JVM
+                value: This comes from another place -> ${X-ARROW:Arrow Property}, with a second one ${X-SECOND:2}
+           """;
+
+        System.setProperty("X-PROPERTY", "This is a property");
+        System.setProperty("X-ARROW", "Arrow!!!!!");
+        System.setProperty("X-SECOND", "99999 2");
+
+        Map<String, Object> map = yamlParser.parseYaml(value);
+
+        assert "This value 'This is a property' comes from JVM".equals(map.get("string")) : "Expected '\"This value 'This is a property' comes from JVM\"', but got " + map.get("string");
+        assert "This comes from another place -> Arrow!!!!!, with a second one 99999 2".equals(map.get("value")) : "Expected '\"This comes from another place -> Arrow!!!!!, with a second one 99999 2\"', but got " + map.get("value");
     }
 }

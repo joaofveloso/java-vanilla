@@ -2,6 +2,8 @@ package com.vanilla.yamlParser;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -134,8 +136,14 @@ public class YamlParser {
         }
     }
 
+    String regex = "\\$\\{([^:}]+)(?::([^}]*))?}";
+
+
     private Object parseValue(String valueString) {
         valueString = valueString.split("#")[0];
+
+        Matcher matcher = Pattern.compile(regex).matcher(valueString);
+        valueString = getValueFromProperties(valueString, matcher);
         if (valueString.equalsIgnoreCase("null")) {
             return null;
         }
@@ -166,6 +174,22 @@ public class YamlParser {
             return parceSplitTyping(valueString);
         }
         return valueString.trim();
+    }
+
+    private String getValueFromProperties(String valueString, Matcher matcher) {
+        StringBuffer result = new StringBuffer();
+
+        while (matcher.find()) {
+            String envVarName = matcher.group(1);
+            String defaultValue = matcher.group(2);
+
+            String envVarValue = System.getProperty(envVarName);
+            String replacement = (envVarValue != null) ? envVarValue : defaultValue;
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(result);
+
+        return result.toString();
     }
 
     private Object parceSplitTyping(String valueString) {
