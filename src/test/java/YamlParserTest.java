@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.vanilla.yamlParser.YamlParser;
-import org.testng.annotations.Test;
 
 public class YamlParserTest {
 
@@ -54,7 +53,7 @@ public class YamlParserTest {
                 key1:
                   subkey1: value1
                   subkey2: value2
-                  subkey3: value3 
+                  subkey3: value3
                 """;
 
         Map<String, Object> map = yamlParser.parseYaml(value);
